@@ -1,3 +1,4 @@
+$ jupyter nbconvert --to html NOTEBOOK-NAME.ipynb
 # Import package
 import tweepy
 import jsonpickle
