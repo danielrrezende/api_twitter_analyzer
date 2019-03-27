@@ -1,0 +1,166 @@
+# Import package
+import tweepy
+import jsonpickle
+import json
+import pandas as pd
+import re
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+
+#---------------------------------------------------------------------------------------------------------------------------
+# API Authentication
+
+filters = ['bolsonaro', 'lula']
+
+
+# Store OAuth authentication credentials in relevant variables
+access_token = "1110590844120248321-5V8MMFemfsdDbpnK5c3KsuQHLyrUR2"
+access_token_secret = "OpNwpIoSh9LmxxStepn0wNGCDXrLT1KG0b3zJxCx6weer"
+consumer_key = "gyK0Qlky1MZSPh1zrU5bLURIp"
+consumer_secret = "IzlJiiumWK0xQey7aRVHRe34Awp239ExxjDPAiGZbRl1jgli6k"
+
+# Pass OAuth details to tweepy's OAuth handler
+def connect_to_twitter_OAuth ():
+	auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+	auth.set_access_token(access_token,access_token_secret)
+
+	api = tweepy.API (auth)
+	return api
+
+api = connect_to_twitter_OAuth () 
+
+
+#---------------------------------------------------------------------------------------------------------------------------
+############### Streaming tweets
+#filepath: onde o arquivo deve ser salvo e seu nome
+#api: o objeto api que criamos anteriormente
+#query: a consulta que será usada pelo Twitter para recuperar os tweets
+#max_tweets: sua conta de desenvolvedor tem um limite de quantas solicitações você pode fazer a cada 15 minutos. Portanto, essa opção só definirá um limite de quantos tweets podemos receber, mas isso pode ser afetado pelos limites impostos pelo Twitter à sua conta e pelo número de tweets disponíveis para seus critérios de pesquisa.
+#lang: A linguagem dos tweets. Nós vamos usar Português.#
+
+def get_save_tweets(filepath, api, query, max_tweets=100, lang='pt'):
+
+    tweetCount = 0
+
+    #Open file and save tweets
+    with open(filepath, 'w') as f:
+
+        # Send the query
+        for tweet in tweepy.Cursor(api.search,q=query,lang=lang).items(max_tweets):         
+
+            #Convert to JSON format
+            f.write(jsonpickle.encode(tweet._json, unpicklable=False) + '\n')
+            tweetCount += 1
+
+        #Display how many tweets we have collected
+        print("Downloaded {0} tweets".format(tweetCount))
+
+
+query = '#Haddad OR #Haddad13 OR #HaddadSim OR' \
+        '#EleNao OR #EleNunca OR #Bolsonaro OR' \
+        '#Bolsonaro17 OR #SomosTodosBolsonaro OR #Bolsonaro2019 OR' \
+        '"haddad" OR "bolsonaro"'
+
+# Get those tweets
+get_save_tweets('tweets.json', api, query)
+
+
+
+
+#---------------------------------------------------------------------------------------------------------------------------
+############### Streaming tweets
+def tweets_to_df(path):
+    
+    tweets = list(open('tweets.json', 'rt'))
+    
+    text = []
+    weekday = []
+    month = []
+    day = []
+    hour = []
+    hashtag = []
+    url = []
+    favorite = []
+    reply = []
+    retweet = []
+    follower = []
+    following = []
+    user = []
+    screen_name = []
+
+    for t in tweets:
+        t = jsonpickle.decode(t)
+        
+        # Text
+        text.append(t['text'])
+        
+        # Decompose date
+        date = t['created_at']
+        weekday.append(date.split(' ')[0])
+        month.append(date.split(' ')[1])
+        day.append(date.split(' ')[2])
+        
+        time = date.split(' ')[3].split(':')
+        hour.append(time[0]) 
+        
+        # Has hashtag
+        if len(t['entities']['hashtags']) == 0:
+            hashtag.append(0)
+        else:
+            hashtag.append(1)
+            
+        # Has url
+        if len(t['entities']['urls']) == 0:
+            url.append(0)
+        else:
+            url.append(1)
+            
+        # Number of favs
+        favorite.append(t['favorite_count'])
+        
+        # Is reply?
+        if t['in_reply_to_status_id'] == None:
+            reply.append(0)
+        else:
+            reply.append(1)       
+        
+        # Retweets count
+        retweet.append(t['retweet_count'])
+        
+        # Followers number
+        follower.append(t['user']['followers_count'])
+        
+        # Following number
+        following.append(t['user']['friends_count'])
+        
+        # Add user
+        user.append(t['user']['name'])
+
+        # Add screen name
+        screen_name.append(t['user']['screen_name'])
+        
+    df = {'text': text,
+         'weekday': weekday,
+         'month' : month,
+         'day': day,
+         'hour' : hour,
+         'has_hashtag': hashtag,
+         'has_url': url,
+         'fav_count': favorite,
+         'is_reply': reply,
+         'retweet_count': retweet,
+         'followers': follower,
+         'following' : following,
+         'user': user,
+         'screen_name' : screen_name
+        }
+    
+    return pd.DataFrame(data = df)
+
+tweets_df = tweets_to_df('tweets.json')
+
+columns=['text', 'weekday', 'month', 'day', 'hour', 'has_hashtag', 'has_url', 'fav_count', 'is_reply', 'retweet_cou',
+'followers', 'following', 'user', 'screen_name']
+
+tweets_df.to_csv('ex3.csv', columns=columns)
