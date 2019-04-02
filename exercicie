@@ -1,166 +1,169 @@
 # Import package
 import tweepy
+from textblob import TextBlob
 import jsonpickle
 import json
 import pandas as pd
+import numpy as np
 import re
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from googletrans import Translator
+import wordcloud
 
 #---------------------------------------------------------------------------------------------------------------------------
 # API Authentication
 
-filters = ['bolsonaro', 'lula']
-
-
 # Store OAuth authentication credentials in relevant variables
-access_token = "1110590844120248321-5V8MMFemfsdDbpnK5c3KsuQHLyrUR2"
-access_token_secret = "OpNwpIoSh9LmxxStepn0wNGCDXrLT1KG0b3zJxCx6weer"
-consumer_key = "gyK0Qlky1MZSPh1zrU5bLURIp"
-consumer_secret = "IzlJiiumWK0xQey7aRVHRe34Awp239ExxjDPAiGZbRl1jgli6k"
+access_token = ""
+access_token_secret = ""
+consumer_key = ""
+consumer_secret = ""
 
 # Pass OAuth details to tweepy's OAuth handler
-def connect_to_twitter_OAuth ():
-	auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-	auth.set_access_token(access_token,access_token_secret)
+auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+auth.set_access_token(access_token,access_token_secret)
 
-	api = tweepy.API (auth)
-	return api
-
-api = connect_to_twitter_OAuth () 
-
+# cria um objeto api
+api = tweepy.API(auth)
 
 #---------------------------------------------------------------------------------------------------------------------------
-############### Streaming tweets
-#filepath: onde o arquivo deve ser salvo e seu nome
-#api: o objeto api que criamos anteriormente
-#query: a consulta que será usada pelo Twitter para recuperar os tweets
-#max_tweets: sua conta de desenvolvedor tem um limite de quantas solicitações você pode fazer a cada 15 minutos. Portanto, essa opção só definirá um limite de quantos tweets podemos receber, mas isso pode ser afetado pelos limites impostos pelo Twitter à sua conta e pelo número de tweets disponíveis para seus critérios de pesquisa.
-#lang: A linguagem dos tweets. Nós vamos usar Português.#
+#Reading and analyzing tweets from an id
+analyser = SentimentIntensityAnalyzer()
 
-def get_save_tweets(filepath, api, query, max_tweets=100, lang='pt'):
+user_id  = 'BarackObama'
+##user_id  = 'realDonaldTrump'
+#user_id  = 'jairbolsonaro'
+count = 200
 
-    tweetCount = 0
+tweets = api.user_timeline(user_id, count = 5, tweet_mode='extended')
 
-    #Open file and save tweets
-    with open(filepath, 'w') as f:
+for t in tweets:
+    print(t.full_text)
+    print()
 
-        # Send the query
-        for tweet in tweepy.Cursor(api.search,q=query,lang=lang).items(max_tweets):         
+###---------------------------------------------------------------------------------------------------------------------------
+## sentiment analyzer with translator
+translator = Translator()
 
-            #Convert to JSON format
-            f.write(jsonpickle.encode(tweet._json, unpicklable=False) + '\n')
-            tweetCount += 1
+def sentiment_analyzer_scores(text, engl=True):
+    #translator
+    if engl:
+        trans = text
+    else:
+        trans = translator.translate(text).text
+    #score analyser
+    score = analyser.polarity_scores(trans)
+    lb = score['compound']
+    if lb >= 0.05:
+        return 1
+    elif (lb > -0.05) and (lb < 0.05):
+        return 0
+    else:
+        return -1
 
-        #Display how many tweets we have collected
-        print("Downloaded {0} tweets".format(tweetCount))
-
-
-query = '#Haddad OR #Haddad13 OR #HaddadSim OR' \
-        '#EleNao OR #EleNunca OR #Bolsonaro OR' \
-        '#Bolsonaro17 OR #SomosTodosBolsonaro OR #Bolsonaro2019 OR' \
-        '"haddad" OR "bolsonaro"'
-
-# Get those tweets
-get_save_tweets('tweets.json', api, query)
-
-
-
-
-#---------------------------------------------------------------------------------------------------------------------------
-############### Streaming tweets
-def tweets_to_df(path):
-    
-    tweets = list(open('tweets.json', 'rt'))
-    
-    text = []
-    weekday = []
-    month = []
-    day = []
-    hour = []
-    hashtag = []
-    url = []
-    favorite = []
-    reply = []
-    retweet = []
-    follower = []
-    following = []
-    user = []
-    screen_name = []
-
+#####---------------------------------------------------------------------------------------------------------------------------
+## make tweets to list
+def list_tweets(user_id, count):
+    tweets = api.user_timeline("@" + user_id, count=count, tweet_mode='extended')
+    tw = [] # lista de tweets inicialmente vazia
     for t in tweets:
-        t = jsonpickle.decode(t)
-        
-        # Text
-        text.append(t['text'])
-        
-        # Decompose date
-        date = t['created_at']
-        weekday.append(date.split(' ')[0])
-        month.append(date.split(' ')[1])
-        day.append(date.split(' ')[2])
-        
-        time = date.split(' ')[3].split(':')
-        hour.append(time[0]) 
-        
-        # Has hashtag
-        if len(t['entities']['hashtags']) == 0:
-            hashtag.append(0)
-        else:
-            hashtag.append(1)
-            
-        # Has url
-        if len(t['entities']['urls']) == 0:
-            url.append(0)
-        else:
-            url.append(1)
-            
-        # Number of favs
-        favorite.append(t['favorite_count'])
-        
-        # Is reply?
-        if t['in_reply_to_status_id'] == None:
-            reply.append(0)
-        else:
-            reply.append(1)       
-        
-        # Retweets count
-        retweet.append(t['retweet_count'])
-        
-        # Followers number
-        follower.append(t['user']['followers_count'])
-        
-        # Following number
-        following.append(t['user']['friends_count'])
-        
-        # Add user
-        user.append(t['user']['name'])
+        tw.append(t.full_text)
+    return tw
 
-        # Add screen name
-        screen_name.append(t['user']['screen_name'])
-        
-    df = {'text': text,
-         'weekday': weekday,
-         'month' : month,
-         'day': day,
-         'hour' : hour,
-         'has_hashtag': hashtag,
-         'has_url': url,
-         'fav_count': favorite,
-         'is_reply': reply,
-         'retweet_count': retweet,
-         'followers': follower,
-         'following' : following,
-         'user': user,
-         'screen_name' : screen_name
-        }
-    
-    return pd.DataFrame(data = df)
+tw = list_tweets(user_id, count)
 
-tweets_df = tweets_to_df('tweets.json')
+## remove patterns
+def remove_pattern(input_txt, pattern):
+    r = re.findall(pattern, input_txt)
+    for i in r:
+        input_txt = re.sub(i, '', input_txt)        
+    return input_txt
 
-columns=['text', 'weekday', 'month', 'day', 'hour', 'has_hashtag', 'has_url', 'fav_count', 'is_reply', 'retweet_cou',
-'followers', 'following', 'user', 'screen_name']
+## clean tweets
+def clean_tweets(lst):
+    # remove twitter Return handles (RT @xxx:)
+    lst = np.vectorize(remove_pattern)(lst, "RT @[\w]*:")
+    # remove twitter handles (@xxx)
+    lst = np.vectorize(remove_pattern)(lst, "@[\w]*")
+    # remove URL links (httpxxx)
+    lst = np.vectorize(remove_pattern)(lst, "https?://[A-Za-z0-9./]*")
+    # remove special car
+    lst = np.core.defchararray.replace(lst, "á", "a")
+    lst = np.core.defchararray.replace(lst, "é", "e")
+    lst = np.core.defchararray.replace(lst, "í", "i")
+    lst = np.core.defchararray.replace(lst, "ó", "o")
+    lst = np.core.defchararray.replace(lst, "ú", "u")
+    lst = np.core.defchararray.replace(lst, "Á", "A")
+    lst = np.core.defchararray.replace(lst, "É", "E")
+    lst = np.core.defchararray.replace(lst, "Í", "I")
+    lst = np.core.defchararray.replace(lst, "Ó", "O")
+    lst = np.core.defchararray.replace(lst, "Ú", "U")
+    lst = np.core.defchararray.replace(lst, "â", "a")
+    lst = np.core.defchararray.replace(lst, "ê", "e")
+    lst = np.core.defchararray.replace(lst, "î", "i")
+    lst = np.core.defchararray.replace(lst, "ô", "o")
+    lst = np.core.defchararray.replace(lst, "Â", "A")
+    lst = np.core.defchararray.replace(lst, "Ê", "E")
+    lst = np.core.defchararray.replace(lst, "Î", "I")
+    lst = np.core.defchararray.replace(lst, "Ô", "O")
+    lst = np.core.defchararray.replace(lst, "ã", "a")
+    lst = np.core.defchararray.replace(lst, "õ", "o")
+    lst = np.core.defchararray.replace(lst, "Ã", "A")
+    lst = np.core.defchararray.replace(lst, "Õ", "O")
+    lst = np.core.defchararray.replace(lst, "ç", "c")
+    lst = np.core.defchararray.replace(lst, "Ç", "C")
+    # remove special characters, numbers, punctuations (except for #)
+    lst = np.core.defchararray.replace(lst, "[^a-zA-Z#]", " ")
+    return lst
 
-tweets_df.to_csv('ex3.csv', columns=columns)
+tw = clean_tweets(tw)
+
+print(tw[2])
+
+print(sentiment_analyzer_scores(tw[2]))
+
+
+#---------------------------------------------------------------------------------------------------------------------------
+## tweets analyzer
+def anl_tweets(lst, title='Tweets Sentiment', engl=True ):
+    sents = []
+    for tw in lst:
+        try:
+            st = sentiment_analyzer_scores(tw, engl)
+            sents.append(st)
+        except:
+            sents.append(0)
+    ax = sns.distplot(sents, kde=False, bins=3)
+    ax.set(xlabel='Negative                Neutral                 Positive',
+           ylabel='#Tweets',
+           title="Tweets of @"+title)
+    return sents
+
+tw_sent = anl_tweets(tw, user_id)
+
+print(tw_sent)
+
+plt.show()
+
+
+#---------------------------------------------------------------------------------------------------------------------------
+
+# def word_cloud(wd_list):
+#     stopwords = set(STOPWORDS)
+#     all_words = ' '.join([text for text in wd_list])
+#     wordcloud = WordCloud(
+#         background_color='white',
+#         stopwords=stopwords,
+#         width=1600,
+#         height=800,
+#         random_state=21,
+#         colormap='jet',
+#         max_words=50,
+#         max_font_size=200).generate(all_words)
+#     plt.figure(figsize=(12, 10))
+#     plt.axis('off')
+#     plt.imshow(wordcloud, interpolation="bilinear");
+
+# word_cloud(tw)
