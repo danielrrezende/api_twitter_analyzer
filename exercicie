@@ -32,8 +32,8 @@ api = tweepy.API(auth)
 #Reading and analyzing tweets from an id
 analyser = SentimentIntensityAnalyzer()
 
-user_id  = 'BarackObama'
-##user_id  = 'realDonaldTrump'
+#user_id  = 'BarackObama'
+user_id  = 'realDonaldTrump'
 #user_id  = 'jairbolsonaro'
 count = 200
 
