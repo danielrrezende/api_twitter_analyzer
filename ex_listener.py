@@ -26,6 +26,7 @@ auth.set_access_token(access_token,access_token_secret)
 # cria um objeto api
 api = tweepy.API(auth)
 sents = []
+
 #---------------------------------------------------------------------------------------------------------------------------
 #create an object called 'customStreamListener'
 def twitter_stream_listener(filter_track):
@@ -200,11 +201,18 @@ def twitter_stream_listener(filter_track):
 
 #---------------------------------------------------------------------------------------------------------------------------
 
-filter_track = ['jairbolsonaro','previdencia']
+#filter_track = ['realDonaldTrump','wall']
+#filter_track = ['jairbolsonaro','previdencia']
 
+print('-------------------------------------------------------------')
+print('API TWITTER Portuguese ANALYZER')
+print('-------------------------------------------------------------')
+print('Please Type the filter that you want to analyze in Twitter')
+print('e.g. "jairbolsonaro" and "previdencia"')
+print('To FINISH, press ctrl+c and visualize the sentimental graph')
+
+filter_track1 = input('First filter: ')
+filter_track2 = input('Second filter: ')
+filter_track = [filter_track1, filter_track2]
 twitter_stream_listener(filter_track)
-
-
-
-
 
