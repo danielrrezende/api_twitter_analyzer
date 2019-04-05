@@ -200,8 +200,7 @@ def twitter_stream_listener(filter_track):
 
 #---------------------------------------------------------------------------------------------------------------------------
 
-filter_track = ['realDonaldTrump','wall']
-#filter_track = ['jairbolsonaro','previdencia']
+filter_track = ['jairbolsonaro','previdencia']
 
 twitter_stream_listener(filter_track)
 
