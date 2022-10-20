@@ -1,3 +1,4 @@
+# Databricks notebook source
 # Import package
 import tweepy
 import numpy as np
@@ -27,7 +28,8 @@ auth.set_access_token(access_token,access_token_secret)
 api = tweepy.API(auth)
 sents = []
 
-#---------------------------------------------------------------------------------------------------------------------------
+# COMMAND ----------
+
 #create an object called 'customStreamListener'
 def twitter_stream_listener(filter_track):
     
@@ -198,7 +200,8 @@ def twitter_stream_listener(filter_track):
 
     f.close()
 
-#---------------------------------------------------------------------------------------------------------------------------
+
+# COMMAND ----------
 
 #filter_track = ['realDonaldTrump','wall']
 #filter_track = ['jairbolsonaro','previdencia']
@@ -214,4 +217,3 @@ filter_track1 = input('First filter: ')
 filter_track2 = input('Second filter: ')
 filter_track = [filter_track1, filter_track2]
 twitter_stream_listener(filter_track)
-
