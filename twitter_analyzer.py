@@ -15,10 +15,10 @@ from googletrans import Translator
 # API Authentication
 
 # Store OAuth authentication credentials in relevant variables
-access_token = "1110590844120248321-f3ZoMl6XugySu1Expl0Z6HoYX1keZA"
-access_token_secret = "HnFvRGQj6opdA0p1AXW5Imi8FBD2zjT3LlZbDahT063MR"
-consumer_key = "UV7YTD3qrxNcSKvCCPWU1R1BE"
-consumer_secret = "dtYxHaVjXzlrW5dmLuiqEDDCAHkvHWkxgF80CFotCaIdXxqHCQ"
+access_token = 
+access_token_secret = 
+consumer_key = 
+consumer_secret = 
 
 # Pass OAuth details to tweepy's OAuth handler
 auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
